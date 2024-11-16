@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" type="text/css" href="game.css">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="score" class="hud">Score: 0</div>
+    <div id="level" class="hud">Level: 1</div>
+    <div id="toast" class="toast">+1!</div>
+    <div id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Level Reached: <span id="finalLevel">1</span></p>
+        <button id="restartButton">Play Again</button>
+    </div>
+    <script src="dist/bundle.js"></script>
+</body>
+</html>

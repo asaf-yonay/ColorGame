@@ -1,0 +1,28 @@
+{
+  "name": "colorgame",
+  "version": "1.0.0",
+  "description": "",
+  "main": "helpers.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "start": "node server.js",
+    "test": "npx playwright test",
+    "serve": "npm run build && npm start",
+    "serve-and-test": "npm run build && npm start & npx wait-on http://localhost:3000 && npm run test",
+    "local": "concurrently  \"npm run serve\" \"wait-on http://localhost:3000 && npm run test\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "concurrently": "^9.1.0",
+    "playwright": "^1.48.2",
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.1.0"
+  },
+  "dependencies": {
+    "express": "^4.21.1"
+  }
+}
