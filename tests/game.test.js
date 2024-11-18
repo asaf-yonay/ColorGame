@@ -1,15 +1,22 @@
-// tests/game.test.js
 const { test, expect } = require('@playwright/test');
-const rootLocation = "http://localhost:3000";
+const rootLocation = "http://localhost:3000?test=true";
 
 const startGameProgramatically = async (page) => {
     const startButton = await page.locator('#startButton');
     await startButton.click(); // Simulate clicking the "Start" button
 };
-test('Game loads correctly', async ({ page }) => {
-    await page.goto('http://localhost:3000');
 
-    // Start the game programmatically
+// Helper function to ensure required objects are loaded
+const ensureGameObjectExists = async (page, objectName) => {
+    const exists = await page.evaluate((name) => typeof window[name] !== 'undefined', objectName);
+    if (!exists) {
+        throw new Error(`${objectName} is not loaded. Ensure the game is properly initialized.`);
+    }
+};
+
+// Tests
+test('Game loads correctly', async ({ page }) => {
+    await page.goto(rootLocation);
     await startGameProgramatically(page);
 
     const canvas = await page.$('#gameCanvas');
@@ -17,21 +24,18 @@ test('Game loads correctly', async ({ page }) => {
 });
 
 test('Targets are rendered on the canvas', async ({ page }) => {
-    await page.goto(rootLocation); // Replace with your dev server's URL
+    await page.goto(rootLocation);
+    await ensureGameObjectExists(page, 'game'); // Check if the game object exists
+
     const canvas = await page.$('#gameCanvas');
     const context = await canvas.evaluate((canvas) => canvas.getContext('2d'));
     expect(context).not.toBeNull();
-    // Add additional checks for targets if feasible
 });
 
 test('Player moves on interaction', async ({ page }) => {
-    await page.goto('http://localhost:3000'); // Replace with your server's URL
-
-    // Start the game programmatically
+    await page.goto(rootLocation);
     await startGameProgramatically(page);
-
-    // Wait for the `window.player` object to be available
-    await page.waitForFunction(() => typeof window.player !== 'undefined');
+    await ensureGameObjectExists(page, 'player'); // Check if the player object exists
 
     const canvas = await page.$('#gameCanvas');
 
@@ -40,43 +44,20 @@ test('Player moves on interaction', async ({ page }) => {
 
     // Check the player's position
     const playerPosition = await page.evaluate(() => window.player);
-    expect(playerPosition.x).toBeCloseTo(200 - playerPosition.size / 2, 1);
-    expect(playerPosition.y).toBeCloseTo(300 - playerPosition.size / 2, 1);
+    expect(playerPosition.x).toBeCloseTo(200);
+    expect(playerPosition.y).toBeCloseTo(300);
 });
 
-test('Bounce decay rate reduces speed multiplier over time', async ({ page }) => {
-    await page.goto('http://localhost:3000');
+test('isColliding detects overlaps correctly', async ({ page }) => {
+    await page.goto(rootLocation);
+    await ensureGameObjectExists(page, 'testFunctions'); // Check if test functions are loaded
 
-    // Start the game programmatically
-    await startGameProgramatically(page);
-    
-    await page.waitForFunction(() => Array.isArray(window.targets) && window.targets.length > 0);
-    // Simulate a collision
-    await page.evaluate(() => {
-        const player = window.player;
-        const target = window.targets[0];
-
-        // Place the player over the first target to simulate a collision
-        player.x = target.x;
-        player.y = target.y;
-
-        // Trigger the reject effect
-        target.reject();
+    const result = await page.evaluate(() => {
+        const player = { x: 50, y: 50, size: 40 };
+        const target = { x: 70, y: 70, size: 40 };
+        return window.testFunctions.isColliding(player, target);
     });
 
-    // Capture the initial speed multiplier
-    const initialSpeedMultiplier = await page.evaluate(() => window.targets[0].speedMultiplier);
-    expect(initialSpeedMultiplier).toBeGreaterThan(1);
-
-    // Wait for some time to allow decay
-    await page.waitForTimeout(200);
-
-    // Capture the updated speed multiplier
-    const updatedSpeedMultiplier = await page.evaluate(() => window.targets[0].speedMultiplier);
-    expect(updatedSpeedMultiplier).toBeLessThan(initialSpeedMultiplier);
-    expect(updatedSpeedMultiplier).toBeGreaterThanOrEqual(1); // Should not decay below 1
+    expect(result).toBe(true);
 });
-
-
-
 

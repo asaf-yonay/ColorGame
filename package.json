@@ -4,7 +4,8 @@
   "description": "",
   "main": "helpers.js",
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --mode development",
+    "build-prod": "webpack --mode production",
     "start": "node server.js",
     "test": "npx playwright test",
     "serve": "npm run build && npm start",

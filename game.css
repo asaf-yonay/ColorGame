@@ -9,7 +9,40 @@ body {
     display: block;
     cursor: pointer;
     transition: background-color 0.5s;
+    
 }
+#gameOver {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 10px;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    z-index: 1000;
+}
+
+#gameOver h2 {
+    margin: 0 0 20px 0;
+}
+
+#restartButton {
+    background: #2ecc71;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#restartButton:hover {
+    background: #27ae60;
+}
+
 .hud {
     position: fixed;
     font-size: 20px;
@@ -34,6 +67,15 @@ body {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s;
+}
+.start-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    padding: 15px 30px;
+    cursor: pointer;
 }
 #gameOver {
     position: fixed;

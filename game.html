@@ -9,12 +9,15 @@
     <div id="score" class="hud">Score: 0</div>
     <div id="level" class="hud">Level: 1</div>
     <div id="toast" class="toast">+1!</div>
-    <div id="gameOver">
+    <button id="startButton" class="start-button">Start</button>   
+    <div id="gameOver" style="display: none;">
         <h2>Game Over!</h2>
         <p>Final Score: <span id="finalScore">0</span></p>
         <p>Level Reached: <span id="finalLevel">1</span></p>
+        <p>Time Played: <span id="finalTime">0 seconds</span></p>
         <button id="restartButton">Play Again</button>
     </div>
+    
     <script src="dist/bundle.js"></script>
 </body>
 </html>

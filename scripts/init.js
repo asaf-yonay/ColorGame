@@ -1,244 +1,331 @@
-
-import { Target } from './logic.js';
+import { accessibleColors, backgroundColors } from './constants.js';
+import { Target } from './target.js';
+import { Particle } from './particle.js';
 import { mixColors } from './helpers.js';
-
-const accessibleColors = [
-    { color: "#FF0000", number: 1 },  // Red
-    { color: "#00FF00", number: 2 },  // Green
-    { color: "#0000FF", number: 3 },  // Blue
-    { color: "#FFFF00", number: 4 },  // Yellow
-    { color: "#FF00FF", number: 5 },  // Magenta
-    { color: "#00FFFF", number: 6 },  // Cyan
-    { color: "#800000", number: 7 },  // Maroon
-    { color: "#808000", number: 8 },  // Olive
-    { color: "#008000", number: 9 },  // Dark Green
-    { color: "#800080", number: 10 }, // Purple
-    { color: "#008080", number: 11 }, // Teal
-    { color: "#000080", number: 12 }, // Navy
-    { color: "#FFA500", number: 13 }, // Orange
-    { color: "#A52A2A", number: 14 }, // Brown
-    { color: "#8A2BE2", number: 15 }, // Blue Violet
-    { color: "#5F9EA0", number: 16 }  // Cadet Blue
-];
-
-const backgroundColors = ["#FFD700", "#00FF00", "#00FFFF", "#FF69B4", "#9370DB", "#1E90FF"]; // Background colors
 
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.currentBgIndex = 0;
-        this.nextBgIndex = 1;
-        this.bgTransitionProgress = 0; // Tracks interpolation progress
-        this.scoreInitialized = false; // Track if score has been initialized
-        this.gameOver = false; // Track if game is over
+        this.startTime = null; // Track when the game starts
+        this.score = 0;
+        this.level = 1;
+        this.player = {};
+        window.player = this.player;
+        this.targets = [];
+        this.particles = [];
+        this.gameActive = false;
         this.setupStartButton();
-
-        window.addEventListener('resize', () => this.resize()); // Dynamically adjust canvas size
+        window.addEventListener('resize', () => this.resize());
+    }
+    
+    setupPlayer(player){   
+        player = { x: 0, y: 0, size: 40, color: '#0000FF', number: 1 }; 
+        return player;
     }
 
-    setupStartButton() {
-        const startButton = document.createElement('button');
-        startButton.id = 'startButton';
-        startButton.textContent = 'Start';
-        startButton.style.position = 'absolute';
-        startButton.style.top = '50%';
-        startButton.style.left = '50%';
-        startButton.style.transform = 'translate(-50%, -50%)';
-        startButton.style.fontSize = '24px';
-        document.body.appendChild(startButton);
 
+    setupStartButton() {
+        const startButton = document.getElementById('startButton');
         startButton.addEventListener('click', () => {
-            document.body.removeChild(startButton);
-            this.setup();
-            this.gameLoop();
+            this.initializeGame();
         });
     }
 
+    setup() {
+        this.startTime = Date.now(); // Record start time
+        this.targets = [];
+        this.particles = [];
+        this.spawnTargets();
+        this.resize();
+        this.player = this.setupPlayer(this.player);
+        this.setupInteractionEvents();
+        this.gameActive = true;
+        this.startBackgroundUpdate();
+    }
+
+    initializeGame() {
+        console.log('Initializing game...');
+        document.getElementById('startButton').style.display = 'none'; // Hide the start button
+        this.level = 1; // Reset level
+        this.score = 0; // Reset score               
+        this.setup(); // Reinitialize the game
+        this.gameLoop();
+    }
+    
+
+    endGame() {
+        console.log('Game over!');
+    
+        // Stop the game loop
+        this.gameActive = false;
+    
+        // Calculate the duration
+        const duration = Math.floor((Date.now() - this.startTime) / 1000); // Convert to seconds
+    
+        // Display the game-over overlay
+        const gameOverOverlay = document.getElementById('gameOver');
+        const finalScoreElement = document.getElementById('finalScore');
+        const finalLevelElement = document.getElementById('finalLevel');
+        const finalTimeElement = document.getElementById('finalTime');
+    
+        finalScoreElement.textContent = this.score;
+        finalLevelElement.textContent = this.level;
+        finalTimeElement.textContent = `${duration} seconds`;
+    
+        gameOverOverlay.style.display = 'block';
+    
+        // Add event listener for Play Again button
+        const restartButton = document.getElementById('restartButton');
+        restartButton.onclick = () => {
+            gameOverOverlay.style.display = 'none'; // Hide the overlay
+            this.initializeGame(); // Reuse game initialization logic
+        };
+    }
+    
+    
+
+
     resize() {
+        console.log('Resizing canvas');
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
     }
 
-    setup() {
-        if (!this.scoreInitialized) {
-            this.score = 0;
-            this.scoreInitialized = true;
-        }
-    
-        this.player = {
-            x: 100,
-            y: 100,
-            size: 50,
-            color: accessibleColors[0].color,
-            number: accessibleColors[0].number,
-        };
-    
-        // Expose player object globally for testing
-        window.player = this.player;
-    
-        this.targets = [];
-        this.spawnTargets();
-        this.resize();
-        this.setupInteractionEvents();
-    
-        document.getElementById('score').textContent = `Score: ${this.score}`;
-        document.getElementById('level').textContent = `Level: 1`;
-    
-        this.gameActive = true;
-        this.gameOver = false;
-    
-        this.updateBackgroundColors(); // Set the initial background
-        this.startBackgroundUpdate(); // Start the random background updates
-    
-        this.draw();
-    
-        this.canvas.style.backgroundColor = backgroundColors[this.currentBgIndex]; // Initial background
-    }
-    
-
     spawnTargets() {
-        this.targets = [];
-        window.targets = this.targets;
-        const startNumber = 2;
-        const maxTargets = 10;
-
-        // Spawn regular targets
-        for (let i = 0; i < maxTargets; i++) {
-            const currentNumber = (startNumber + i - 1) % accessibleColors.length + 1;
+        console.log('Spawning targets');
+        const maxRegularTargets = 10;
+        for (let i = 0; i < maxRegularTargets; i++) {
+            const currentNumber = (2 + i - 1) % accessibleColors.length + 1;
             const targetColor = accessibleColors.find((c) => c.number === currentNumber);
             this.targets.push(new Target(this.canvas, 2 + Math.random() * 3, targetColor));
+            console.log(`Spawned target with number: ${targetColor.number}`);
         }
 
-        // Spawn hazard targets
-        for (let i = 0; i < 2; i++) {
-            this.targets.push(new Target(this.canvas, 3 + Math.random() * 2, { color: "#000000", number: null }, 'hazard'));
+        const hazardCount = Math.min(this.level, 5);
+        for (let i = 0; i < hazardCount; i++) {
+            // Assign a default number to hazard targets to avoid errors during update
+            this.targets.push(new Target(this.canvas, 3 + Math.random() * 2, { color: "#000000", number: -1 }, 'hazard'));
+            console.log('Spawned hazard target');
         }
     }
 
     setupInteractionEvents() {
+        console.log('Setting up interaction events');
+        setInterval(() => this.checkCollisions(), 100);
         this.canvas.addEventListener('mousemove', (event) => {
-            if (this.gameActive) {
-                this.handleInteraction(event);
-            }
+            const rect = this.canvas.getBoundingClientRect();
+            this.player.x = event.clientX - rect.left;
+            this.player.y = event.clientY - rect.top;            
         });
-
-        this.canvas.addEventListener('touchmove', (event) => {
-            event.preventDefault();
-            if (this.gameActive) {
-                this.handleInteraction(event.touches[0]);
-            }
-        }, { passive: false });
-    }
-
-    handleInteraction(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = (event.clientX || event.pageX) - rect.left;
-        const y = (event.clientY || event.pageY) - rect.top;
-
-        this.player.x = x - this.player.size / 2;
-        this.player.y = y - this.player.size / 2;
-
-        this.checkCollisions();
-    }
-
-    checkCollisions() {
-        this.targets = this.targets.filter((target) => {
-            if (
-                this.player.x < target.x + target.size &&
-                this.player.x + this.player.size > target.x &&
-                this.player.y < target.y + target.size &&
-                this.player.y + this.player.size > target.y
-            ) {
-                if (target.type === 'hazard') {
-                    this.endGame();
-                    return false;
-                }
-
-                if (
-                    target.number === this.player.number + 1 ||
-                    target.number === this.player.number - 1
-                ) {
-                    this.score++;
-                    this.player.color = mixColors(this.player.color, target.color); // Mix colors
-                    this.player.number = target.number;
-                    document.getElementById('score').textContent = `Score: ${this.score}`;
-                    return false; // Remove the target
-                } else {
-                    target.reject(); // Temporarily increase speed on rejection
-                }
-            }
-            return true; // Keep the target
-        });
-
-        if (this.targets.length === 0 && !this.gameOver) {
-            this.stopBackgroundUpdate(); // Stop background updates
-            this.setup(); // Directly start the next level
-        }
-    }
-
-    endGame() {
-        this.gameActive = false;
-        this.gameOver = true;
-        alert('Game Over!'); // Simple Game Over alert
-    }
-
-    updateBackgroundColors() {
-        const root = document.documentElement;
-        const currentColor = backgroundColors[this.currentBgIndex];
-        const nextColor = backgroundColors[this.nextBgIndex];
-
-        root.style.setProperty('--bg-color-start', currentColor);
-        root.style.setProperty('--bg-color-end', nextColor);
-
-        this.currentBgIndex = this.nextBgIndex;
-        this.nextBgIndex = (this.nextBgIndex + 1) % backgroundColors.length;
     }
 
     startBackgroundUpdate() {
-        const updateBackground = () => {
-            this.updateBackgroundColors();
-
-            // Schedule the next update at a random interval (5-10 seconds)
-            const nextInterval = Math.random() * 5000 + 5000;
-            this.bgTimeout = setTimeout(updateBackground, nextInterval);
-        };
-
-        updateBackground();
+        console.log('Starting background color update');
+        setInterval(() => {
+            this.ctx.fillStyle = backgroundColors[this.currentBgIndex];
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.currentBgIndex = (this.currentBgIndex + 1) % backgroundColors.length;
+            console.log(`Background color updated to: ${backgroundColors[this.currentBgIndex]}`);
+        }, 5000); // Change background every 5 seconds
     }
 
-    stopBackgroundUpdate() {
-        clearTimeout(this.bgTimeout);
+    updateParticles() {
+        this.particles.forEach((particle) => particle.update());
+        this.particles = this.particles.filter((particle) => particle.life > 0);
     }
 
-    update() {
-        if (!this.gameOver) {
-            this.targets.forEach((target) => target.update(this.player)); // Pass player to target updates
+    drawParticles() {
+        this.particles.forEach((particle) => particle.draw(this.ctx));
+    }
+
+    drawHintLine() {
+        const validTarget = this.targets.find(target => target.number !== -1 && Math.abs(target.number - this.player.number) === 1);
+        if (validTarget) {
+            const dx = validTarget.x - this.player.x;
+            const dy = validTarget.y - this.player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            const lineThickness = Math.max(1, 10 - (distance / 50)); // Thicker line when closer
+
+            this.ctx.lineWidth = lineThickness;
+            this.ctx.strokeStyle = "rgba(255, 255, 0, 0.5)";
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.player.x + this.player.size / 2, this.player.y + this.player.size / 2);
+            this.ctx.lineTo(validTarget.x + validTarget.size / 2, validTarget.y + validTarget.size / 2);
+            this.ctx.stroke();
         }
     }
 
-    draw() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.targets.forEach((target) => target.draw(this.ctx));
-
+    drawPlayer() {
+        // Draw the player rectangle
+        console.log(this.player);
         this.ctx.fillStyle = this.player.color;
         this.ctx.fillRect(this.player.x, this.player.y, this.player.size, this.player.size);
-        this.ctx.fillStyle = "#FFFFFF";
+    
+        // Draw the player's number
+        this.ctx.fillStyle = "#FFFFFF"; // Text color
         this.ctx.font = "bold 20px Arial";
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
-        this.ctx.fillText(this.player.number, this.player.x + this.player.size / 2, this.player.y + this.player.size / 2);
+        this.ctx.fillText(
+            this.player.number,
+            this.player.x + this.player.size / 2,
+            this.player.y + this.player.size / 2
+        );
     }
 
-    gameLoop() {
-        if (this.gameActive) {
-            this.update();
-            this.draw();
-            requestAnimationFrame(() => this.gameLoop());
+    updatePlayerState(target) {
+        // Update player's color by blending with the target's color
+        this.player.color = mixColors(this.player.color, target.color);
+        // Update player's number to the target's number
+        this.player.number = target.number;
+    }
+    
+
+    checkCollisions() {
+        // Filter targets and process collisions
+        this.targets = this.targets.filter(target => {
+            if (this.isColliding(this.player, target)) {
+                return this.handleCollision(target); // Handle the collision and decide if the target should be removed
+            }
+            return true; // Keep targets that were not collided with
+        });
+    
+        // Check if all regular targets are collected
+        if (this.targets.every(target => target.type === 'hazard')) {
+            console.log('All regular targets collected, starting next level');
+            this.setup(); // Start the next level
         }
+    }
+    
+    // Check if the player is colliding with a target
+    isColliding(player, target) {
+        return (
+            player.x < target.x + target.size &&
+            player.x + player.size > target.x &&
+            player.y < target.y + target.size &&
+            player.y + player.size > target.y
+        );
+    }
+    
+    // Handle what happens when a collision occurs
+    handleCollision(target) {
+        if (target.type === 'hazard') {
+            console.log('Collision with hazard detected');
+            this.endGame();
+            return false; // Remove the hazard after collision
+        }
+    
+        if (this.isValidTarget(target)) {
+            this.processValidCollision(target);
+            return false; // Remove the target after collision
+        } else {
+            console.log(`Invalid collision with target number: ${target.number}`);
+            target.reject(); // Apply rejection logic
+        }
+    
+        return true; // Keep the target if not removed
+    }
+    
+    // Determine if a target is valid for the player
+    isValidTarget(target) {
+        return (
+            target.number === this.player.number + 1 ||
+            target.number === this.player.number - 1
+        );
+    }
+    
+    // Handle the effects of a valid collision
+    processValidCollision(target) {
+        console.log(`Valid collision with target number: ${target.number}`);
+        this.score++;
+        this.updatePlayerState(target);
+    
+        // Add particle effects
+        for (let i = 0; i < 10; i++) {
+            this.particles.push(new Particle(target.x + target.size / 2, target.y + target.size / 2, target.color));
+        }
+    }
+    
+
+    gameLoop() {
+        if (!this.gameActive) return;
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.targets.forEach((target) => {
+            target.update(this.player);
+            target.draw(this.ctx);
+        });
+
+        this.updateParticles();
+        this.drawParticles();
+        this.drawHintLine();
+        this.drawPlayer();
+
+        requestAnimationFrame(() => this.gameLoop());
     }
 }
 
+// At the end of the init.js file, after the Game class definition
+if (process.env.NODE_ENV === 'test' || window.location.search.includes('test=true')) {
+    console.log("Exposing test functions for Playwright...");
+    window.testFunctions = {
+        isColliding: (player, target) => {
+            return (
+                player.x < target.x + target.size &&
+                player.x + player.size > target.x &&
+                player.y < target.y + target.size &&
+                player.y + player.size > target.y
+            );
+        },
+        isValidTarget: (player, target) => {
+            return target.number === player.number + 1 || target.number === player.number - 1;
+        },
+        handleCollision: function (target) {
+            const game = this; // Use the current game context
+            if (target.type === 'hazard') {
+                console.log('Collision with hazard detected');
+                game.endGame();
+                return false;
+            }
+
+            if (game.isValidTarget(game.player, target)) {
+                console.log(`Valid collision with target: ${JSON.stringify(target)}`);
+                game.updatePlayerState(target);
+                game.score++;
+                for (let i = 0; i < 10; i++) {
+                    game.particles.push(new Particle(target.x, target.y, target.color));
+                }
+                return false; // Remove the target
+            } else {
+                console.log(`Invalid collision with target: ${JSON.stringify(target)}`);
+                target.reject();
+                return true; // Keep the target
+            }
+        },
+        checkCollisions: function () {
+            const game = this; // Use the current game context
+            game.targets = game.targets.filter(target => {
+                if (game.isColliding(game.player, target)) {
+                    return game.handleCollision(target);
+                }
+                return true;
+            });
+
+            if (game.targets.every(target => target.type === 'hazard')) {
+                console.log('All regular targets collected, starting next level');
+                game.setup();
+            }
+        },
+    };
+}
+
 window.onload = () => {
-    new Game();
+    console.log('Window loaded, initializing game');
+    const gameInstance = new Game();
+    if (window.location.search.includes('test=true')) {
+        console.log('Test mode detected. Exposing game instance.');
+        window.game = gameInstance; // Expose the game instance for tests
+    }
 };
