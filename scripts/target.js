@@ -1,27 +1,31 @@
+import { drawCloud, drawTriangle } from "./helpers";
+
 export class Target {
-    constructor(canvas, speed, colorObj, type = 'regular') {
+    constructor(canvas, speed, colorObj, type = 'regular', x = null, y = null) {
         this.canvas = canvas;
         this.size = 40;
         this.baseSpeed = speed;
-        this.speedMultiplier = 1; // Starts at normal speed
-        this.rejectDecayRate = 0.05; // Refined decay rate
+        this.speedMultiplier = 1;
+        this.rejectDecayRate = 0.05;
         this.color = colorObj.color;
         this.number = colorObj.number;
-        this.type = type; // Can be 'regular' or 'hazard'
-        this.shape = ['circle', 'rectangle'][Math.floor(Math.random() * 2)]; // Random shape
-        this.scale = 1; // For bounce animation
-        this.isGlowing = false; // Glow effect for valid targets
-        this.skullImage = new Image();
-        this.isImageLoaded = false;
+        this.type = type;
+        this.shape = type === 'regular' ? ['circle', 'rectangle', 'triangle', 'cloud'][Math.floor(Math.random() * 4)] : 'rectangle';
+        this.scale = 1;
+        this.isGlowing = false;
     
-        // Load the skull image
-        this.skullImage.onload = () => {
-            this.isImageLoaded = true;
-        };
-        this.skullImage.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Skull_and_crossbones.svg/1024px-Skull_and_crossbones.svg.png';
+        if (x !== null && y !== null) {
+            this.x = x;
+            this.y = y;
+        } else {
+            this.spawn();
+        }
     
-        this.spawn();
+        this.dx = (Math.random() - 0.5) * this.baseSpeed;
+        this.dy = (Math.random() - 0.5) * this.baseSpeed;
     }
+    
+    
     
 
     spawn() {
@@ -67,42 +71,45 @@ export class Target {
         ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
         ctx.scale(this.scale, this.scale);
         ctx.translate(-(this.x + this.size / 2), -(this.y + this.size / 2));
-
-        if (this.type === 'hazard') {
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(this.x, this.y, this.size, this.size);
-            if (this.isImageLoaded) {
-                ctx.drawImage(this.skullImage, this.x, this.y, this.size, this.size);
-            }            
-        } else {
-            // Draw glow effect if applicable
-            if (this.isGlowing) {
-                ctx.shadowColor = "rgba(255, 255, 0, 0.8)";
-                ctx.shadowBlur = 10;
-            } else {
-                ctx.shadowBlur = 0;
-            }
-
-            // Draw the shape
-            ctx.fillStyle = this.color;
-            if (this.shape === 'circle') {
+    
+        ctx.fillStyle = this.color;
+    
+        let textX = this.x + this.size / 2;
+        let textY = this.y + this.size / 2;
+    
+        switch (this.shape) {
+            case 'circle':
                 ctx.beginPath();
                 ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (this.shape === 'rectangle') {
+                break;
+    
+            case 'rectangle':
                 ctx.fillRect(this.x, this.y, this.size, this.size);
-            }
-
-            // Draw number if regular target
-            if (this.type === 'regular') {
-                ctx.fillStyle = "#FFFFFF";
-                ctx.font = "bold 20px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(this.number, this.x + this.size / 2, this.y + this.size / 2);
-            }
+                break;
+    
+            case 'triangle':
+                const centroid = drawTriangle(ctx, this.x + this.size / 2, this.y + this.size / 2, this.size);
+                textX = centroid.centroidX;
+                textY = centroid.centroidY;
+                break;    
+    
+            case 'cloud':
+                drawCloud(ctx, this.x + this.size / 2, this.y + this.size / 2, this.size / 2);
+                break;
         }
-
+    
+        // Draw number if regular target
+        if (this.type === 'regular') {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = "bold 20px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(this.number, textX, textY);
+        }
+    
         ctx.restore();
     }
+    
+    
 }

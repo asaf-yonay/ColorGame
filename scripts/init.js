@@ -15,6 +15,8 @@ class Game {
         this.targets = [];
         this.particles = [];
         this.gameActive = false;
+        this.currentBgIndex = 0; // Start with the first color
+        this.nextBgIndex = 1; // Keep track of the next color for transitions    
         this.setupStartButton();
         window.addEventListener('resize', () => this.resize());
     }
@@ -34,10 +36,10 @@ class Game {
 
     setup() {
         this.startTime = Date.now(); // Record start time
+        this.resize();
         this.targets = [];
         this.particles = [];
-        this.spawnTargets();
-        this.resize();
+        this.spawnTargets();        
         this.player = this.setupPlayer(this.player);
         this.setupInteractionEvents();
         this.gameActive = true;
@@ -94,21 +96,32 @@ class Game {
 
     spawnTargets() {
         console.log('Spawning targets');
+        this.targets = []; // Clear existing targets
+    
         const maxRegularTargets = 10;
+        const margin = 50; // Avoid spawning too close to canvas edges
+    
         for (let i = 0; i < maxRegularTargets; i++) {
             const currentNumber = (2 + i - 1) % accessibleColors.length + 1;
             const targetColor = accessibleColors.find((c) => c.number === currentNumber);
-            this.targets.push(new Target(this.canvas, 2 + Math.random() * 3, targetColor));
+    
+            const randomX = margin + Math.random() * (this.canvas.width - 2 * margin);
+            const randomY = margin + Math.random() * (this.canvas.height - 2 * margin);
+    
+            this.targets.push(new Target(this.canvas, 2 + Math.random() * 3, targetColor, 'regular', randomX, randomY));
             console.log(`Spawned target with number: ${targetColor.number}`);
         }
-
+    
         const hazardCount = Math.min(this.level, 5);
         for (let i = 0; i < hazardCount; i++) {
-            // Assign a default number to hazard targets to avoid errors during update
-            this.targets.push(new Target(this.canvas, 3 + Math.random() * 2, { color: "#000000", number: -1 }, 'hazard'));
+            const randomX = margin + Math.random() * (this.canvas.width - 2 * margin);
+            const randomY = margin + Math.random() * (this.canvas.height - 2 * margin);
+    
+            this.targets.push(new Target(this.canvas, 3 + Math.random() * 2, { color: "#000000", number: -1 }, 'hazard', randomX, randomY));
             console.log('Spawned hazard target');
         }
     }
+    
 
     setupInteractionEvents() {
         console.log('Setting up interaction events');
@@ -123,12 +136,23 @@ class Game {
     startBackgroundUpdate() {
         console.log('Starting background color update');
         setInterval(() => {
-            this.ctx.fillStyle = backgroundColors[this.currentBgIndex];
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            this.currentBgIndex = (this.currentBgIndex + 1) % backgroundColors.length;
-            console.log(`Background color updated to: ${backgroundColors[this.currentBgIndex]}`);
+            // Use CSS transitions for smoother updates
+            const canvas = this.canvas;
+            const currentColor = backgroundColors[this.currentBgIndex];
+            const nextColor = backgroundColors[this.nextBgIndex];
+    
+            // Apply transition effect using CSS
+            canvas.style.transition = 'background-color 2s ease-in-out';
+            canvas.style.backgroundColor = currentColor;
+    
+            // Cycle through colors
+            this.currentBgIndex = this.nextBgIndex;
+            this.nextBgIndex = (this.nextBgIndex + 1) % backgroundColors.length;
+    
+            console.log(`Background color updated to: ${currentColor}`);
         }, 5000); // Change background every 5 seconds
     }
+    
 
     updateParticles() {
         this.particles.forEach((particle) => particle.update());
@@ -158,8 +182,7 @@ class Game {
     }
 
     drawPlayer() {
-        // Draw the player rectangle
-        console.log(this.player);
+        // Draw the player rectangle        
         this.ctx.fillStyle = this.player.color;
         this.ctx.fillRect(this.player.x, this.player.y, this.player.size, this.player.size);
     
@@ -235,11 +258,19 @@ class Game {
             target.number === this.player.number - 1
         );
     }
+
+    updateScoreLabel() {
+        const scoreLabel = document.getElementById('score');
+        if (scoreLabel) {
+            scoreLabel.textContent = `Score: ${this.score}`;
+        }
+    }
     
     // Handle the effects of a valid collision
     processValidCollision(target) {
         console.log(`Valid collision with target number: ${target.number}`);
         this.score++;
+        this.updateScoreLabel();
         this.updatePlayerState(target);
     
         // Add particle effects
@@ -251,20 +282,21 @@ class Game {
 
     gameLoop() {
         if (!this.gameActive) return;
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear previous frame
+    
         this.targets.forEach((target) => {
             target.update(this.player);
             target.draw(this.ctx);
         });
-
+    
         this.updateParticles();
         this.drawParticles();
         this.drawHintLine();
         this.drawPlayer();
-
+    
         requestAnimationFrame(() => this.gameLoop());
     }
+    
 }
 
 // At the end of the init.js file, after the Game class definition

@@ -17,4 +17,17 @@ export const accessibleColors = [
     { color: "#5F9EA0", number: 16 },
 ];
 
-export const backgroundColors = ["#FFD700", "#00FF00", "#00FFFF", "#FF69B4", "#9370DB", "#1E90FF"];
+export const backgroundColors = [
+    '#FF0000', // Red
+    '#FF4500', // Reddish Orange
+    '#FFA500', // Orange
+    '#FFFF00', // Yellow
+    '#ADFF2F', // Yellowish Green
+    '#00FF00', // Green
+    '#00FA9A', // Aquamarine
+    '#00FFFF', // Cyan
+    '#1E90FF', // Dodger Blue
+    '#0000FF', // Blue
+    '#4B0082', // Indigo
+    '#8A2BE2', // Violet (closer to red again)
+];
