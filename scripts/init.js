@@ -125,13 +125,45 @@ class Game {
 
     setupInteractionEvents() {
         console.log('Setting up interaction events');
-        setInterval(() => this.checkCollisions(), 100);
+    
+        // Mouse events
         this.canvas.addEventListener('mousemove', (event) => {
             const rect = this.canvas.getBoundingClientRect();
-            this.player.x = event.clientX - rect.left;
-            this.player.y = event.clientY - rect.top;            
+            this.player.x = event.clientX - rect.left - this.player.size / 2;
+            this.player.y = event.clientY - rect.top - this.player.size / 2;
         });
+    
+        // Touch events
+        this.canvas.addEventListener('touchmove', (event) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = event.touches[0]; // Get the first touch point
+            this.player.x = touch.clientX - rect.left - this.player.size / 2;
+            this.player.y = touch.clientY - rect.top - this.player.size / 2;
+    
+            event.preventDefault(); // Prevent scrolling during gameplay
+        });
+    
+        this.canvas.addEventListener('touchstart', (event) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = event.touches[0];
+            this.player.x = touch.clientX - rect.left - this.player.size / 2;
+            this.player.y = touch.clientY - rect.top - this.player.size / 2;
+    
+            event.preventDefault(); // Prevent scrolling during gameplay
+        });
+    
+        this.canvas.addEventListener('touchend', () => {
+            console.log('Touch ended');
+        });
+    
+        // Interval for collision checking
+        setInterval(() => {
+            this.checkCollisions();
+        }, 50); // Check collisions every 50ms
+    
+        console.log('Interaction events and collision checking interval set up');
     }
+    
 
     startBackgroundUpdate() {
         console.log('Starting background color update');
